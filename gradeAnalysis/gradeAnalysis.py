@@ -20,6 +20,7 @@ def load_degree_plan(filepath):
     plan = []
     with open(filepath, newline='') as f:
         reader = csv.DictReader(f)
+        #print("HEADERS:", reader.fieldnames)
         for row in reader:
 
             numb = row['NUMB'].strip()
@@ -41,16 +42,22 @@ def filter_year(rows, start_year, end_year):
     #uses TERM column (YYYY format) for filtering
     filtered = []
     for row in rows: 
-        term = row.get('TERM', '')
-        if len(term) >= 4:
-            year = int(term[:4])
+        term_desc = row.get('TERM', '')
+
+        parts = term_desc.strip().split()
+        if len(parts) == 2 and parts[1].isdigit():
+            year = int(parts[1])
+
             if start_year <= year <= end_year:
                 filtered.append(row)
 
     return filtered
 
 def make_course_id(subj, numb):
-    return f"{subj.strip().replace(' ', '')}{numb.strip()}"
+    subj = subj.strip().upper().replace(" ", " ")
+
+    numb = ''.join(filter(str.isdigit, numb))
+    return f"{subj}{numb}"
 
 #Analytics Layer
 #===================================================
@@ -96,8 +103,8 @@ def compute_grade_distribution(rows):
 
     for row in rows:
         #skip fully redacted rows
-        if row.get('A', '*') == '*' or row.get('TOT_NON_W', '0') == '0':
-            continue
+        if row.get('TOT_NON_W', '0') == '0':
+            valid = True
 
         try:
             #A+/-
@@ -143,6 +150,10 @@ def group_by_course(rows):
     for row in rows:
         subj = row.get('SUBJ', '').strip()
         numb = row.get('NUMB', '').strip()
+
+        if not subj or not numb:
+            continue
+
         course_id = make_course_id(subj, numb)
         courses[course_id].append(row)
 
@@ -197,6 +208,10 @@ def match_degree_to_data(degree_plan, course_data):
     for course in degree_plan:
         cid = course['course_id']
 
+        #print("\n--- DEGREE PLAN IDS ---")
+        #for c in degree_plan[:10]:
+            #print(c['course_id'])
+
         if cid in course_data:
             report.append({
                 'course': cid,
@@ -222,11 +237,17 @@ def run_analysis(grade_file, degree_file, start, end):
     grades = load_csv_data(grade_file)
     #recon = normalize_data(recon_file)
     degree_plan = load_degree_plan(degree_file)
+    #print("Loaded rows:", len(grades))
+
 
     #grades = apply_normalization(grades)
     grades = filter_year(grades, start, end)
 
     course_groups = group_by_course(grades)
+
+    print("Number of grouped courses:", len(course_groups))
+    print("Sample course IDs:", list(course_groups.keys())[:10])
+
 
     course_results = {}
     for cid, rows in course_groups.items():
@@ -250,7 +271,7 @@ def find_degree_file(choice):
     normalized = choice.lower().replace(" ", "_")
 
     for filename in os.listdir(base_dir):
-        if normalized in filename.lower():
+        if normalized in filename.lower() and filename.endswith('.csv'):
             return os.path.join(base_dir, filename)
         
     return None
@@ -275,7 +296,7 @@ def main():
 
         results = run_analysis(
             grade_file = "data/raw/pub_rec_master_w2016-f2025.csv",
-            degree_file = degree_file,
+            degree_file = find_degree_file(choice),
             #recon_file = "data/",
             start = start,
             end = end
