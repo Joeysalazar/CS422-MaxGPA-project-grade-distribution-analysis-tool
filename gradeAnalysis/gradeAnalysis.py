@@ -485,7 +485,14 @@ def main():
     
         
     for entry in results:
-        print(f"\nYear {entry['year']} - Term {entry['term']}")
+        TERM_MAP = {
+            1: "Fall",
+            2: "Winter",
+            3: "Spring",
+            4: "Summer"
+        }
+        term_name = TERM_MAP.get(entry['term'])
+        print(f"\nPlan Year {entry['year']} - {term_name}")
         print(f"{entry['course']}")
 
         if entry.get('asterisk_only'):
@@ -501,12 +508,23 @@ def main():
 
             if instructors:
                 ranked = rank_instructors(instructors)
+
                 if ranked:
+                    print("\nInstructor Breakdown:")
+                    for inst in ranked:
+                        print(
+                            f"- {inst['instructor']} | "
+                            f"A: {inst['A']}% | "
+                            f"Pass: {inst['Pass']}% | "
+                            f"DNF: {inst['DNF']}% | "
+                            f"N={inst['total']}"
+                        )
+
+                    # optional: still highlight top
                     top = ranked[0]
                     print(
-                        f"Top Instructor: {top['instructor']} | "
-                        f"A: {top['A']}% | Pass: {top['Pass']}% | "
-                        f"DNF: {top['DNF']}% | N={top['total']}"
+                        f"\nBest Option → {top['instructor']} "
+                        f"(Highest A%, lowest risk)"
                     )
                 else:
                     print("No instructor data available.")
