@@ -64,7 +64,7 @@ def load_degree_plan(filepath, recon_map):
             plan.append({
                 'year': year,
                 'term': term,
-                'course_id': make_course_id(subj, num),
+                'course_id': normalize_id(subj, num),
                 'title': reconcile(title, recon_map)
             })
 
@@ -121,19 +121,16 @@ def filter_year(rows, start_year, end_year):
     filtered = []
 
     for row in rows: 
-        term = row.get('term', '').strip()
+        year = row.get('year', '').strip()
 
-        year = None
-
-        parts = term.split()
-        if len(parts) == 2 and parts[1].isdigit():
-            year = int(parts[1])
-        elif term.isdigit() and len(term) >= 4:
-            year = int(term[:4])
+        try:
+            year= int(year)
+        except:
+            continue
 
         if year and start_year <= year <= end_year:
             filtered.append(row)
-
+    
     return filtered
 
 def make_course_id(subj, num):
@@ -162,6 +159,12 @@ def normalize_grade_row(row, recon_map):
     course_id = make_course_id(subj, num)
 
     return course_id, title
+
+def normalize_id(subj, num):
+    subj = subj.upper().strip()
+    num = ''.join(filter(str.isdigit, str(num)))
+    return f"{subj}{num}"
+
 
 #Analytics Layer
 #===================================================
@@ -202,16 +205,16 @@ def compute_grade_distribution(rows):
 
     for row in rows:
         try:
-            a_total = safe_int(row.get('AP', 0)) + safe_int(row.get('A', 0)) + safe_int(row.get('AM', 0))
-            b_total = safe_int(row.get('BP', 0)) + safe_int(row.get('B', 0)) + safe_int(row.get('BM', 0))
-            c_total = safe_int(row.get('CP', 0)) + safe_int(row.get('C', 0)) + safe_int(row.get('CM', 0))
+            a_total = safe_int(row.get('ap', 0)) + safe_int(row.get('a', 0)) + safe_int(row.get('am', 0))
+            b_total = safe_int(row.get('bp', 0)) + safe_int(row.get('b', 0)) + safe_int(row.get('bm', 0))
+            c_total = safe_int(row.get('cp', 0)) + safe_int(row.get('c', 0)) + safe_int(row.get('cm', 0))
             dnf_total = (
-                safe_int(row.get('DP', 0)) + 
-                safe_int(row.get('D', 0)) + 
-                safe_int(row.get('DM', 0)) + 
-                safe_int(row.get('F', 0)) + 
-                safe_int(row.get('N', 0)))
-            pass_total = safe_int(row.get('P', 0))
+                safe_int(row.get('dp', 0)) + 
+                safe_int(row.get('d', 0)) + 
+                safe_int(row.get('dm', 0)) + 
+                safe_int(row.get('f', 0)) + 
+                safe_int(row.get('n', 0)))
+            pass_total = safe_int(row.get('p', 0))
 
         #skip bad rows safely
         except Exception:
@@ -343,22 +346,43 @@ def instructor_distributions(instructor_index):
 
     return results
 
+def find_course_match(cid, course_data):
+    # exact match first (fast)
+    if cid in course_data:
+        return cid
+
+    # fallback: match by subject + number
+    target_subj = ''.join(filter(str.isalpha, cid))
+    target_num = ''.join(filter(str.isdigit, cid))
+
+    for key in course_data:
+        subj = ''.join(filter(str.isalpha, key))
+        num = ''.join(filter(str.isdigit, key))
+
+        if subj == target_subj and num == target_num:
+            return key
+
+    return None
+
 #match required courses to computed analytics
 def match_degree_to_data(degree_plan, course_data):
     #ensures all required courses appear in output
     #handles missing data gracefully
     
     report = []
-    for course in degree_plan:
-        cid = course['course_id']
 
-        if cid in course_data:
-            course_entry = course_data[cid]
+    for course in degree_plan:
+        course_id = course['course_id']
+
+        matched_key = find_course_match(course_id, course_data)
+
+        if matched_key:
+            course_entry = course_data[matched_key]
 
             # detect asterisk-only case
             if course_entry.get("overall", {}).get("asterisk_only", False):
                 report.append({
-                    'course': cid,
+                    'course': course_id,
                     'year': course['year'],
                     'term': course['term'],
                     'asterisk_only': True,
@@ -366,7 +390,7 @@ def match_degree_to_data(degree_plan, course_data):
                 })
             else:
                 report.append({
-                    'course': cid,
+                    'course': course_id,
                     'year': course['year'],
                     'term': course['term'],
                     'distribution': course_entry['overall'],
@@ -375,57 +399,52 @@ def match_degree_to_data(degree_plan, course_data):
 
         else:
             report.append({
-                'course': cid,
+                'course': course_id,
                 'year': course['year'],
                 'term': course['term'],
                 'missing': True,
                 'no_data': True
             })
-
+            print(f"NO Match: {course_id}")
+    
     return report
 
 #full analytics pipeline
 def run_analysis(grade_file, degree_file, start, end, recon_map):
     #seperates pipeline stages clearly
     #supports independent updates of datasets
-    grades = load_csv_data("data/grades/cleaned_pub_rec_master.csv")
+    grades = load_csv_data(grade_file)
     degree_plan = load_degree_plan(degree_file, recon_map)
     
-    grade = filter_year(grades, start, end)
-
-    course_groups = group_by_course(grades, recon_map)
     course_instructors_map = defaultdict(lambda: defaultdict(list))
+    grades = filter_year(grades, start, end)
+    course_groups = group_by_course(grades, recon_map)
 
     for row in grades:
-        cid, _ = normalize_grade_row(row, recon_map)
-
-        if cid not in course_groups:
-            continue
+        course_id, _ = normalize_grade_row(row, recon_map)
 
         inst = row.get('instructor', 'UNKNOWN').strip()
-        course_instructors_map[cid][inst].append(row)
+        course_instructors_map[course_id][inst].append(row)
 
     course_results = {}
 
-    for cid, rows in course_groups.items():
+    for course_id, rows in course_groups.items():
 
-        inst_rows = course_instructors_map.get(cid, {})
+        inst_rows = course_instructors_map.get(course_id, {})
 
         course_instructors = {
             inst: compute_grade_distribution(inst_rows_list)
             for inst, inst_rows_list in inst_rows.items()
         }
 
-        course_results[cid] = {
+        course_results[course_id] = {
             "overall": compute_grade_distribution(rows),
             "instructors": course_instructors
         }
 
     #match degree plan
     report = match_degree_to_data(degree_plan, course_results)
-    print("TOTAL GRADES LOADED:", len(grades))
-    print("COURSE GROUPS:", len(course_groups))
-    print("DEGREE PLAN SIZE:", len(degree_plan))
+
     return report
 
 #User Interface
