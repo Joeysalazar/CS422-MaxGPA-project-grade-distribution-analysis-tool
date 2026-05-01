@@ -1,5 +1,12 @@
 Computer Science BS - Choice Groups
 
+FIRST-YEAR / DEGREE MAP NOTES
+CS 122 recommended
+MATH 112Z
+WR 121Z
+WR 122Z
+WR 123
+
 CALCULUS 1
 MATH 251Z
 MATH 261
@@ -9,15 +16,19 @@ CALCULUS 2
 MATH 252Z
 MATH 247
 
-STATS
+ADDITIONAL MATH / STATS
+MATH 253Z
+MATH 341
 MATH 343
+MATH 425
 MATH 345M
 
 ETHICS
 PHIL 223
 PHIL 123
 
-WRITING
+WRITING / SOFTWARE ENGINEERING
+CS 322
 WR 320
 WR 321
 HC 301H
@@ -25,13 +36,34 @@ HC 301H
 SCIENCE AREA
 12 credits from one listed science area
 
+Biology
+Chemistry
+Earth Sciences
+Geography
+Physics
+Psychology
+
 Possible subject areas found in dataset:
 BI
 CH
 ERTH
 GEOG
 PHYS
+PSY
+
+DEGREE GUIDE CORE ED
+Arts and Letters course
+Arts and Letters course
+Arts and Letters course
+One Arts and Letters course may also satisfy a cultural literacy requirement
+
+Social Science course
+Social Science course
+Social Science course
+One Social Science course may also satisfy a cultural literacy requirement
 
 ELECTIVE REQUIREMENTS
+General elective courses
 Upper-division CS electives
+Upper-division CS electives numbered 410-499
 Upper-division math or theoretical CS elective
