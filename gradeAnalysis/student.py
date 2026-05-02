@@ -34,7 +34,7 @@ def load_degree_plan(filepath, recon_map):
         for row in reader:
             # normalize all possible column variants once
             subj = row.get('SUBJ', '').strip() or row.get('subj', '').strip()
-            num = row.get('NUMB', '').strip() or row.get('num', '').strip()
+            num = (row.get('NUMB') or row.get('NUM') or row.get('num') or '').strip()
 
             title = (
                 row.get('DEGREE_TITLE', '') or
@@ -148,9 +148,9 @@ def reconcile(value, recon_map):
     return recon_map.get(v, value.strip())
 
 def normalize_grade_row(row, recon_map):
-    subj = row.get('subj', '').strip()
-    num = row.get('num', '').strip()
-    title = row.get('title', '').strip()
+    subj = (row.get('subj') or row.get('SUBJ') or '').strip()
+    num = (row.get('NUM') or row.get('NUMB') or row.get('num') or '').strip()
+    title = (row.get('title') or row.get('TITLE') or '').strip()
 
     # apply reconciliation to title
     title = reconcile(title, recon_map)
@@ -423,7 +423,7 @@ def run_analysis(grade_file, degree_file, start, end, recon_map):
     for row in grades:
         course_id, _ = normalize_grade_row(row, recon_map)
 
-        inst = row.get('instructor', 'UNKNOWN').strip()
+        inst = (row.get('instructor') or row.get('INSTRUCTOR') or 'UNKNOWN').strip().upper()
         course_instructors_map[course_id][inst].append(row)
 
     course_results = {}
@@ -454,6 +454,7 @@ def main():
     global recon_map
     recon_map = load_reconciliation("data/reconciliation.csv")
 
+    
     choice = input("Choose major: ").strip().lower()
 
     files = {
