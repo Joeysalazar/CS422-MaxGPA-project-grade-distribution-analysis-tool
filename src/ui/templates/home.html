@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MaxGPA — University of Oregon</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"/>
+</head>
+<body>
+
+  <!-- UO style top bar -->
+  <div class="uo-header">
+    <span class="uo-title">University of Oregon</span>
+  </div>
+
+  <div class="home-page">
+
+    <div class="home-card">
+
+      <div class="logo-bar">
+        <span class="logo-text">MaxGPA</span>
+        <span class="logo-sub">Grade Distribution Analysis Tool</span>
+      </div>
+
+      <p class="card-desc">
+        Please select how you are accessing the system.
+      </p>
+
+      <div class="role-buttons">
+
+        <!-- Student button — goes to the major/year selection screen -->
+        <a href="/select" class="role-btn student-btn">
+          <span class="role-btn-title">Student</span>
+          <span class="role-btn-desc">
+            View grade distributions and find the best instructor
+            for each required course in your degree plan.
+          </span>
+        </a>
+
+        <!-- Admin button — goes to the admin interface -->
+        <a href="/admin" class="role-btn admin-btn">
+          <span class="role-btn-title">Administrator</span>
+          <span class="role-btn-desc">
+            Load and update grade history data,
+            degree plan files, and reconciliation data.
+          </span>
+        </a>
+
+      </div>
+
+      <p class="data-note">
+        Data sourced from UO Office of Public Records · 2015–2025
+      </p>
+
+    </div>
+  </div>
+
+</body>
+</html>
