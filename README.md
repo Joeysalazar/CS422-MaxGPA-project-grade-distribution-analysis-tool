@@ -1,26 +1,146 @@
-# MaxGPA - University of Oregon Grade Distribution Analysis Tool
-CS 422 Software Methodologies - Spring 2026
-(Team: Adrianna, Joey, Reid, Abby)
+# MaxGPA - University of Oregon Grade Distribution Tool
 
-## What is MaxGPA
- 
- MaxGPA is a web-based tool that helps University of Oregon students plan their degree and maximize their GPA. A student selects their major and range of academic years, and the system generates a report showing the grade distribution for every required course in that major broken down by instructor. The best instructor for each course is highlighted so students can make informed decisions when registering for classes. 
+CS 422 Software Methodologies – Spring 2026
+Team: Adrianna, Joey, Reid, Abby
 
- The system supports three majors: 
- - Computer Science 
- - Psychology 
- - Architecture 
+---
 
- Grade data comes from the UO Office of Public Records and covers academic years 2015 through 2025.
+## How to Run MaxGPA (Step-by-Step)
 
- ## Who is this for?
- 
- students - Use the system to view grade distributions for every required course in your degree plan, see which instructors give the highest grades, and plan your schedule to maximise your GPA.
+Follow these steps exactly:
 
- administrators - Use the admin interface to load new grade history data and plan your schedule to maxmize your GPA.
+### 1. Download the project
 
- ## Requirements 
+* Download the project as a ZIP file from GitHub
+* Extract (unzip) the folder to your Desktop
 
- Before running the system, make sure you have the following installed on your machine:
- - Python 3.8 or higher - download from https://www.python.org/
- 
+### 2. Install Python
+
+* Go to: https://www.python.org/downloads/
+* Download and install Python
+
+### 3. Open the project in Terminal
+
+- Open the extracted project folder
+- Click in the address bar at the top of the folder
+- Type:
+
+```text
+powershell
+```
+
+- Press **Enter**
+
+![Example of opening PowerShell from the project folder](docs/images/Install-example.png)
+
+This opens a terminal directly inside the project folder.
+
+### 4. Install required packages
+
+In the terminal, type:
+
+```powershell
+pip install -r requirements.txt
+```
+
+Press **Enter** and wait for it to finish.
+
+### 5. Run the application
+
+In the same terminal, type:
+
+```powershell
+python .\src\ui\app.py
+```
+
+Press **Enter**.
+
+### 6. Open the website
+
+The app should open automatically in your browser.
+
+If it does not, open your browser and go to:
+
+```text
+http://127.0.0.1:5000
+```
+
+---
+
+## What is MaxGPA?
+
+MaxGPA is a web app that helps University of Oregon students choose courses and instructors strategically.
+
+A student selects:
+
+* a major
+* a range of academic years
+
+The app then shows:
+
+* grade distributions for required courses
+* instructor comparisons
+* the best instructor for each course
+
+---
+
+## Supported Majors
+
+* Computer Science
+* Psychology
+* Architecture
+
+---
+
+## Who is this for?
+
+**Students**
+
+* Compare instructors
+* View grade distributions
+* Plan schedules using historical grade data
+
+**Administrators**
+
+* Upload grade data
+* Update degree plans
+* Maintain reconciliation data
+
+---
+
+## Project Structure
+
+```text
+data/
+  grades/
+  degree_plans/
+
+gradeAnalysis/
+  student.py
+  admin.py
+  data_loader.py
+
+src/ui/
+  app.py
+  templates/
+  static/
+```
+
+---
+
+## Notes
+
+* Uses UO historical grade data from 2015–2025
+* Required courses are defined in degree CSV files
+* Flexible requirements such as CoreEd, electives, and choice groups are documented separately
+* Reconciliation files help keep course naming consistent across datasets
+
+---
+
+## ✅ You’re Done!
+
+You can now:
+
+* select a major
+* choose a year range
+* view course grade data and instructor recommendations
