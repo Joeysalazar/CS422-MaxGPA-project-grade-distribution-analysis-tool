@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MaxGPA</title>
+  <!-- Main stylesheet -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"/>
+</head>
+<body>
+
+  <!-- Full-page centered layout — single card sitting in the middle of screen -->
+  <div class="page-center">
+    <div class="card">
+
+      <!-- System name and subtitle -->
+      <div class="logo-bar">
+        <span class="logo-text">MaxGPA</span>
+        <span class="logo-sub">University of Oregon Grade Planner</span>
+      </div>
+
+      <!-- Short description telling the student what the system does -->
+      <p class="card-desc">
+        Select your major and a range of years to see the best instructor
+        for every required course in your degree plan — organized by year and term.
+      </p>
+
+      <!-- Selection form — GET so the report URL contains the parameters
+           and the student can bookmark or share their report link           -->
+      <form action="/report" method="GET" class="select-form">
+
+        <!-- Major dropdown — options come from the MAJORS dict in app.py -->
+        <div class="field">
+          <label for="major">Major</label>
+          <select id="major" name="major">
+            {% for key, label in majors.items() %}
+              <!-- key becomes the URL param value, label is what the student sees -->
+              <option value="{{ key }}">{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Year range — two dropdowns sitting side by side -->
+        <div class="field-row">
+
+          <div class="field">
+            <label for="year_start">From year</label>
+            <select id="year_start" name="year_start">
+              {% for y in years %}
+                <!-- Default to earliest available year (2015) -->
+                <option value="{{ y }}" {% if y == 2015 %}selected{% endif %}>{{ y }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="year_end">To year</label>
+            <select id="year_end" name="year_end">
+              <!-- Reversed so most recent year (2025) appears at the top -->
+              {% for y in years | reverse %}
+                <!-- Default to latest available year (2025) -->
+                <option value="{{ y }}" {% if y == 2025 %}selected{% endif %}>{{ y }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+        </div>
+
+        <button type="submit" class="btn-generate">Generate degree plan</button>
+
+      </form>
+
+      <!-- Data attribution note at bottom of card -->
+      <p class="data-note">Data sourced from UO Office of Public Records · 2015–2025</p>
+
+    </div>
+  </div>
+
+</body>
+</html>

@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MaxGPA — Administrator</title>
+  <!-- Main stylesheet -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"/>
+</head>
+<body>
+
+  <!-- Sticky navbar — shows system name and current section -->
+  <nav class="navbar">
+    <a href="/" class="nav-logo">MaxGPA</a>
+    <span class="nav-info">Administrator Control Interface</span>
+  </nav>
+
+  <div class="report-page">
+
+    <!-- Page header explaining what this interface does -->
+    <div class="report-header">
+      <h1>Administrator Control Interface</h1>
+      <p class="report-meta">
+        Load and update system data. Preview all data before committing.
+        Grade data and degree plan data can be updated independently.
+      </p>
+    </div>
+
+    <!-- Flash message area — shown after a successful load or an error.
+         message and message_type are passed in from Flask via session.
+         message_type is either "success" or "error" which controls the CSS color. -->
+    {% if message %}
+      <div class="admin-message {{ message_type }}">
+        {{ message }}
+      </div>
+    {% endif %}
+
+    <!-- ── Section 1: Grade History ─────────────────────────────────────────
+         Allows the admin to upload a new grade history CSV from UO.
+         The file is previewed before being committed to the data folder.    -->
+    <div class="admin-section">
+      <div class="admin-section-header">
+        <span>Load Grade History Data</span>
+      </div>
+      <div class="admin-section-body">
+
+        <p class="admin-desc">
+          Upload the cleaned grade history CSV file from UO Office of
+          Public Records. This will replace the current grade data.
+          The system will show you a preview before saving.
+        </p>
+
+        <!-- File upload form — POST to /admin/load-grades
+             enctype="multipart/form-data" is required for file uploads     -->
+        <form action="/admin/load-grades" method="POST" enctype="multipart/form-data">
+          <div class="admin-field">
+            <label for="grade_file">Select grade history CSV file</label>
+            <!-- accept=".csv" filters the file picker to CSV files only -->
+            <input type="file" id="grade_file" name="grade_file" accept=".csv"/>
+          </div>
+          <button type="submit" class="btn-admin">Load grade data</button>
+        </form>
+
+        <!-- Preview box — only shown after the admin uploads a file.
+             grade_preview is a dict of the first valid non-asterisk row.
+             The admin must confirm before the file is actually saved.       -->
+        {% if grade_preview %}
+          <div class="preview-box">
+            <p class="preview-label">Preview — first valid row:</p>
+
+            <!-- Loop through each field in the preview row and display
+                 key on the left, value on the right                        -->
+            {% for key, val in grade_preview.items() %}
+              <div class="preview-row">
+                <span class="preview-key">{{ key }}</span>
+                <span class="preview-val">{{ val }}</span>
+              </div>
+            {% endfor %}
+
+            <!-- Confirm / cancel buttons shown below the preview.
+                 Confirm submits to /admin/confirm-grades which saves the file.
+                 Cancel clears the preview and goes back to /admin.          -->
+            <form action="/admin/confirm-grades" method="POST">
+              <div class="preview-buttons">
+                <button type="submit" name="action" value="confirm" class="btn-admin">
+                  Confirm and save
+                </button>
+                <a href="/admin" class="btn-cancel">Cancel</a>
+              </div>
+            </form>
+          </div>
+        {% endif %}
+
+      </div>
+    </div>
+
+    <!-- ── Section 2: Degree Plan ───────────────────────────────────────────
+         Allows the admin to upload a new degree plan CSV for one major.
+         Each major has its own file — updating one does not affect others.  -->
+    <div class="admin-section">
+      <div class="admin-section-header">
+        <span>Load Degree Plan Data</span>
+      </div>
+      <div class="admin-section-body">
+
+        <p class="admin-desc">
+          Upload a degree plan CSV file for one of the three supported
+          majors. This will not affect grade history data.
+          The system will show you a preview before saving.
+        </p>
+
+        <!-- File upload form — POST to /admin/load-degree
+             Includes a major selector so Flask knows which file to overwrite -->
+        <form action="/admin/load-degree" method="POST" enctype="multipart/form-data">
+
+          <!-- Major dropdown — determines which degree plan file gets updated -->
+          <div class="admin-field">
+            <label for="major_select">Major</label>
+            <select id="major_select" name="major">
+              <option value="cs">Computer Science</option>
+              <option value="psychology">Psychology</option>
+              <option value="architecture">Architecture</option>
+            </select>
+          </div>
+
+          <div class="admin-field">
+            <label for="degree_file">Select degree plan CSV file</label>
+            <input type="file" id="degree_file" name="degree_file" accept=".csv"/>
+          </div>
+
+          <button type="submit" class="btn-admin">Load degree plan</button>
+
+        </form>
+
+        <!-- Preview box — same pattern as grade history preview above.
+             degree_preview is populated by Flask after the file is uploaded. -->
+        {% if degree_preview %}
+          <div class="preview-box">
+            <p class="preview-label">Preview — first valid row:</p>
+
+            {% for key, val in degree_preview.items() %}
+              <div class="preview-row">
+                <span class="preview-key">{{ key }}</span>
+                <span class="preview-val">{{ val }}</span>
+              </div>
+            {% endfor %}
+
+            <!-- Confirm submits to /admin/confirm-degree which saves the file -->
+            <form action="/admin/confirm-degree" method="POST">
+              <div class="preview-buttons">
+                <button type="submit" name="action" value="confirm" class="btn-admin">
+                  Confirm and save
+                </button>
+                <a href="/admin" class="btn-cancel">Cancel</a>
+              </div>
+            </form>
+          </div>
+        {% endif %}
+
+      </div>
+    </div>
+
+    <!-- ── Section 3: Reconciliation File ──────────────────────────────────
+         Allows the admin to upload a new reconciliation CSV.
+         This file maps inconsistent course names to standard names
+         and is applied every time grade data is loaded.                     -->
+    <div class="admin-section">
+      <div class="admin-section-header">
+        <span>Load Reconciliation File</span>
+      </div>
+      <div class="admin-section-body">
+
+        <p class="admin-desc">
+          Upload the reconciliation CSV to standardize inconsistent
+          course names between the grade history data and degree plan.
+          Format: CHANGE_FROM, TO (one mapping per row).
+        </p>
+
+        <!-- File upload form — POST to /admin/load-recon
+             No preview step for reconciliation — it is saved immediately    -->
+        <form action="/admin/load-recon" method="POST" enctype="multipart/form-data">
+          <div class="admin-field">
+            <label for="recon_file">Select reconciliation CSV file</label>
+            <input type="file" id="recon_file" name="recon_file" accept=".csv"/>
+          </div>
+          <button type="submit" class="btn-admin">Load reconciliation file</button>
+        </form>
+
+      </div>
+    </div>
+
+    <!-- Back button at the bottom — returns to the home role selection page -->
+    <div class="report-footer">
+      <a href="/" class="btn-back">← Back to home</a>
+    </div>
+
+  </div>
+
+</body>
+</html>
