@@ -1,166 +1,284 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8"/>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-        <title>{{major}} - MaxGPA Report</title>
-        <link rel="stylesheet" href="{{url_for('static', filename='style.css')}}"/>
-        <!-- Chart.js for bar charts — loaded from CDN, no install needed -->
-        <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    </head>
-    <body>
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{{ major }} — MaxGPA</title>
+  <!-- Main stylesheet -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"/>
+  <!-- Chart.js for bar charts — pulled from CDN so no install needed -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
 
-        <!-- Nav bar shows current major and year range at all times -->
-        <nav class="navbar">
-            <a href="/" class="nav-logo">MaxGPA</a>
-            <span class="nav-info">{{ major}} &nbsp;·&nbsp; {{ year_start }}-{{ year_end }}</span>
-        </nav>
+  <!-- Sticky navbar — always visible while scrolling so student always
+       knows which major and year range they are looking at              -->
+  <nav class="navbar">
+    <a href="/" class="nav-logo">MaxGPA</a>
+    <span class="nav-info">{{ major }} &nbsp;·&nbsp; {{ year_start }}–{{ year_end }}</span>
+  </nav>
 
-        <div class="report-page">
-            
-            <!-- Report header with legend explaining the grade buckets -->
-            <div class="report-header">
-                <h1>{{ major }}</h1>
-                <p class="report-meta">
-                    Grade Distributions · Academic year {{ year_start }}-{{ year_end}} · Data from UO Office of Public Records
-                </p>
+  <div class="report-page">
 
-                <!-- Color-coded legend so students know what each bar represents -->
-                 <div class="legend-row">
-                    <span class="legend-chip a">A</span>
-                    <span class="legend-chip b">B</span>
-                    <span class="legend-chip c">C</span>
-                    <span class="legend-chip dnf">DNF</span>
-                    <span class="legend-note">DNF includes D-, D, D+, F, and N</span>
-                 </div>
+    <!-- Report header: major name, year range, data source, and grade legend -->
+    <div class="report-header">
+      <h1>{{ major }}</h1>
+      <p class="report-meta">
+        Degree plan · Academic years {{ year_start }}–{{ year_end }} ·
+        Data from UO Office of Public Records
+      </p>
+
+      <!-- Color-coded legend so students know what each bar color means
+           Colors match exactly what Chart.js renders in every chart below -->
+      <div class="legend-row">
+        <span class="legend-chip a">A</span>
+        <span class="legend-chip b">B</span>
+        <span class="legend-chip c">C</span>
+        <span class="legend-chip dnf">DNF</span>
+        <span class="legend-note">DNF includes D–, D, D+, F, and N</span>
+      </div>
+    </div>
+
+    <!-- Empty state — shown if build_report() returned no groups at all -->
+    {% if not groups %}
+      <div class="empty-state">
+        <p>No data found for the selected major and year range.</p>
+        <a href="/" class="btn-back">← Back to selection</a>
+      </div>
+
+    {% else %}
+
+      <!-- Loop through each term group returned by app.py
+           Each group has a heading like "Year 1 — Fall" and a list of courses -->
+      {% for group in groups %}
+
+        <!-- Term heading e.g. "Year 1 — Fall", "Year 1 — Winter", "Year 2 — Fall" -->
+        <h2 class="term-heading">{{ group.heading }}</h2>
+
+        <!-- Loop through each required course in this term -->
+        {% for course in group.courses %}
+        <div class="course-block">
+
+          <!-- Course code in a green header strip at the top of each card -->
+          <div class="course-header">
+            <span class="course-code">{{ course.code }}</span>
+          </div>
+
+          <!-- Case 1: UO redacted this course's data for student privacy
+               This happens when fewer than 10 students took the class or
+               when individual grades could be reverse-engineered           -->
+          {% if course.asterisk_only %}
+            <p class="no-data">
+               {{ course.code }} is required but grade data is not available
+              (suppressed by UO for privacy).
+            </p>
+
+          <!-- Case 2: course exists in the degree plan but has no matching
+               records in the grade history CSV for the selected year range  -->
+          {% elif course.no_data %}
+            <p class="no-data">
+               No grade data found for {{ course.code }} in the selected year range.
+            </p>
+
+          <!-- Case 3: normal course — show recommendation banner and charts -->
+          {% else %}
+
+            <!-- Best instructor banner — dark green highlighted block
+                 showing the top-ranked instructor with their grade stats
+                 Ranked byx rank_instructors(): highest %A first  -->
+            {% if course.best_instructor %}
+            <div class="best-banner">
+              <div class="best-label">Best option</div>
+              <!-- Instructor name in large text -->
+              <div class="best-name">{{ course.best_instructor.name }}</div>
+              <!-- Grade stat badges showing their actual distribution -->
+              <div class="best-stats">
+                <span class="stat a">A: {{ course.best_instructor.A }}%</span>
+                <span class="stat b">B: {{ course.best_instructor.B }}%</span>
+                <span class="stat c">C: {{ course.best_instructor.C }}%</span>
+                <span class="stat dnf">DNF: {{ course.best_instructor.DNF }}%</span>
+                <!-- Sample size so student knows how reliable the data is -->
+                <span class="stat total">n={{ course.best_instructor.total }} students</span>
+              </div>
+            </div>
+            {% endif %}
+
+            <!-- All instructors combined bar chart
+                 Shows the overall grade distribution across every student
+                 who took this course regardless of instructor section      -->
+            <div class="chart-group">
+              <p class="chart-label">All instructors combined</p>
+              <div class="chart-wrap">
+                <!-- Canvas ID uses loop indices to stay unique across all courses.
+                     Chart.js needs a unique ID for every canvas it renders into. -->
+                <canvas id="chart_all_{{ loop.index }}_{{ loop.index0 }}" height="90"></canvas>
+              </div>
             </div>
 
-
-             <!--Empty state - shown if no grade data matched the selection-->
-            {% if not courses %}
-                <div class="emty-state">
-                    <p>No grade data found for the selected major and year range.</p>
-                    <a href="/" class="btn-back">← Back to Selection</a>
-                </div>
-
-            {% else %}
-                <!-- Loop through every courses returned by build_report() in app.py -->
-                {% for course in courses %}
-                <div class="course-block">
-
-                    <div class="course-header">
-                        <span class="course-code">{{ course.code }}</span>
-                        <span class="course-title">{{ course.title }}</span>
-                    </div>
-
-                    <!-- All-instructors chart: aggregates every student who took this course -->
-                    <div class="chart-group">
-                        <p class="chart-label">All Instructors</p>
-                        <div class="chart-wrap">
-                            <!-- Unique canvas ID built from loop index so Chart.js can target it-->
-                            <canvas id="chart_all_{{ loop.index }}" height="90"></canvas>
-                        </div>
-                    </div>
-
-
-                    <!-- per-instructor charts: one bar chart per instructor, sorted by % A -->
-                    {% for inst in course.instructors %}
-                    <div class="chart-group instructor-chart">
-                        <p class="chart-label">{{ inst.name }}</p>
-                        <div class="chart-wrap">
-                            <!-- ID uses both outer and inner loop index to stay unique-->
-                            <canvas id="chart_inst_{{ loop.index }}_{{ loop.index0 }}" height="90"></canvas>
-                        </div>
-                    </div>
-                    {% endfor %}
-
-                    <!-- Fallback message if no instructor breakdown in available-->
-                    {% if not course.instructors %}
-                        <p class="no-data">No instructor breakdown available for this course. </p>
-                    {% endif %}
-
-                </div>
-                {% endfor %}
-
-
-                <!-- Back button at the bottom of the report -->
-                <div class="report-footer">
-                    <a href="/" class="btn-back">← New report</a>
-                </div>
-
+            <!-- Best instructor chart — same data as the banner above but
+                 shown as a bar chart so the student can visually compare   -->
+            {% if course.best_instructor %}
+            <div class="chart-group instructor-chart">
+              <p class="chart-label">
+                {{ course.best_instructor.name }}
+                <!-- Green "recommended" badge next to the instructor name -->
+                <span class="best-tag">recommended</span>
+              </p>
+              <div class="chart-wrap">
+                <canvas id="chart_best_{{ loop.index }}_{{ loop.index0 }}" height="90"></canvas>
+              </div>
+            </div>
             {% endif %}
+
+            <!-- All other instructors ranked below the best
+                 Ordered by ranking: next highest %A, etc.       -->
+            {% for inst in course.other_instructors %}
+            <div class="chart-group instructor-chart">
+              <p class="chart-label">{{ inst.name }}</p>
+              <div class="chart-wrap">
+                <!-- Three indices needed to keep this ID unique:
+                     outer loop (course), inner loop (instructor)           -->
+                <canvas id="chart_inst_{{ loop.index }}_{{ loop.index0 }}_{{ loop.index }}" height="90"></canvas>
+              </div>
+            </div>
+            {% endfor %}
+
+            <!-- Fallback message if the course has no instructor records at all -->
+            {% if not course.best_instructor and not course.other_instructors %}
+              <p class="no-data">No instructor breakdown available.</p>
+            {% endif %}
+
+          {% endif %}
+
         </div>
+        {% endfor %}
 
-        <script>
-            //-- Chart colors - one per grade bucket
-            const COLORS = {
-                A: '#2d8653', //green
-                B: '#2563a8', //blue
-                C: '#c47e1a',  //amber
-                DNF: '#b03030', //red
-            };
-            const LABELS = ['A', 'B', 'C', 'DNF'];
+      {% endfor %}
 
-            //-- makeChart
-            //creates a single bar chart on the given canvas element.
-            //canvasId: the HTML id of the <canvas> to render into
-            //data: {A: number, B: number, C: number, DNF: number } (percentages)
-            function makeChart(canvasId, data) {
-                const ctx = document.getElementById(canvasId);
-                if (!ctx) return;
-                new Chart(ctx, {
-                    type: 'bar',
-                    data: {
-                        labels: LABELS,
-                        datasets: [{
-                            data: [data.A, data.B, data.C, data.DNF],
-                            backgroundColor: LABELS.map(l => COLORS[1]),
-                            borderRadius: 4,
-                            borderSkipped: false,
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        plugins: {
-                            legend: { display: false }, 
-                            tooltip: {
-                                //show percentage sign
-                                callbacks: {
-                                     label: ctx => '${ctx.parsed.y}%'
-                                    }
-                            }
-                        },
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                                max: 100,
-                                ticks: { callback: v => v + '%', font: { size: 11 }},
-                                grid: { color: 'rgba(0,0,0,0.06)'}
-                            },
-                            x: {
-                                ticks: {font: { size: 13, weight: '600'} },
-                                grid: {display: false }
-                            }
-                        }
-                    }
-                });
+      <!-- Back button at the very bottom so student can start a new report -->
+      <div class="report-footer">
+        <a href="/" class="btn-back">← New report</a>
+      </div>
+
+    {% endif %}
+  </div>
+
+  <script>
+    // Chart colors — one color per grade bucket 
+    // These match the legend chips in the report header
+    const COLORS = {
+      A:   '#1e6b40',  // green  — matches --green CSS variable
+      B:   '#8abb40',  // blue   — matches --blue CSS variable
+      C:   '#fee11a',  // amber  — matches --amber CSS variable
+      DNF: '#8b2222',  // red    — matches --red CSS variable
+    };
+
+    // Grade labels — always displayed in this order on every chart
+    const LABELS = ['A', 'B', 'C', 'DNF'];
+
+    // makeChart() 
+    // Creates and renders a single horizontal bar chart into a canvas element.
+    //
+    // canvasId — the HTML id attribute of the <canvas> to render into
+    // data     — object with keys A, B, C, DNF, all percentages (0–100)
+    //
+    // All charts share the same options (0–100% y-axis, no legend)
+    // so that every chart in the report is visually comparable
+    function makeChart(canvasId, data) {
+      const ctx = document.getElementById(canvasId);
+      // Safety check — if the canvas doesn't exist in the DOM, skip silently
+      // This happens for courses where no_data is true (no canvas rendered)
+      if (!ctx) return;
+
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: LABELS,
+          datasets: [{
+            data: [data.A, data.B, data.C, data.DNF],
+            // l is the label string e.g. 'A', 'B' — NOT the number 1
+            // This maps each bar to its correct color from the COLORS object
+            backgroundColor: LABELS.map(l => COLORS[l]),
+            borderRadius: 4,       // rounded bar tops
+            borderSkipped: false,  // round all corners including the base
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            // Hide the built-in Chart.js legend — we use our own HTML legend chips
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                // Add a % sign to the tooltip value when hovering over a bar
+                // Must use backticks (template literal) — single quotes won't work
+                label: ctx => `${ctx.parsed.y}%`
+              }
             }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              max: 100,  // always 0–100% so every chart is visually comparable
+              ticks: {
+                callback: v => v + '%',  // add % sign to y-axis tick labels
+                font: { size: 11 }
+              },
+              grid: { color: 'rgba(0,0,0,0.06)' }  // very subtle grid lines
+            },
+            x: {
+              ticks: { font: { size: 13, weight: '600' } },
+              grid: { display: false }  // no vertical grid lines — cleaner look
+            }
+          }
+        }
+      });
+    }
 
-            //Render all charts
-            //allData is the full courses list passed 
-            //loop through it ad call makeChart() for each canvas on the page
-            const allData = {{ courses | tojson | safe }};
-            allData.forEach((course, i ) => {
-                //render the all-instructors chart for this course
-                makeChart('chart_all_${i + 1}', course.all_instructors);
+    // Render all charts 
+    // groups is the full nested data structure passed from Flask.
+    // | tojson converts the Python list to a JSON string.
+    // | safe tells Flask not to escape the quotes inside the JSON —
+    //  without | safe the browser would see &quot; instead of " and crash.
+    // @ts-nocheck 
+    const groups = {{ groups | tojson | safe }};
 
-                //render one chart per instructor for this course
-                course.instructors.forEach((inst, j) => {
-                    makeChart('chart_inst_${i + 1}_${j}', inst.grades);
-                });
-            });
+    // Loop through every group (term) and every course inside it
+    groups.forEach((group, gi) => {
+      group.courses.forEach((course, ci) => {
 
-        </script>
+        // Skip courses with no data — their canvas elements were never
+        // rendered into the HTML so there is nothing to draw into
+        if (course.no_data) return;
 
-    </body>
+        // Render the all-instructors combined chart for this course
+        // Canvas ID must match exactly what Jinja2 rendered in the HTML
+        // Backticks are required — single quotes do not interpolate variables
+        makeChart(`chart_all_${ci + 1}_${ci}`, course.all_grades);
+
+        // Render the best instructor chart if one exists
+        if (course.best_instructor) {
+          makeChart(`chart_best_${ci + 1}_${ci}`, {
+            A:   course.best_instructor.A,
+            B:   course.best_instructor.B,
+            C:   course.best_instructor.C,
+            DNF: course.best_instructor.DNF,
+          });
+        }
+
+        // Render one chart per remaining instructor below the best
+        course.other_instructors.forEach((inst, ii) => {
+          makeChart(`chart_inst_${ci + 1}_${ci}_${ci + 1}`, {
+            A:   inst.A,
+            B:   inst.B,
+            C:   inst.C,
+            DNF: inst.DNF,
+          });
+        });
+
+      });
+    });
+  </script>
+
+</body>
 </html>

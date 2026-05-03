@@ -1,0 +1,636 @@
+/* Reset 
+   Removes default browser margins, padding, and sizing inconsistencies
+   so every element behaves the same across Chrome, Firefox, and Safari      */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/*  Design tokens
+   All colors, fonts, and spacing defined as CSS variables in one place.
+   Change a value here and it updates everywhere automatically.               */
+:root {
+  --green:       #2d8653;   /* primary brand color — used for logo, headings, buttons */
+  --green-light: #e8f5ee;   /* light green — course header strip background */
+  --green-dark:  #1e6b40;   /* darker green — best instructor banner, term headings */
+  --lime-green:  #8abb40;   /* B grade bar color */
+  --yellow:      #fee11a;   /* C grade bar color */
+  --red:         #8b2222;   /* DNF grade bar color */
+  --gray-1:      #f5f5f3;   /* page background — very light warm gray */
+  --gray-2:      #e8e8e4;   /* borders and dividers */
+  --gray-3:      #c4c4bc;   /* muted text like the data-note attribution */
+  --gray-5:      #6b6b65;   /* secondary text — labels, metadata, chart labels */
+  --gray-9:      #1a1a18;   /* primary text — headings and body copy */
+  --white:       #ffffff;
+  --radius:      0px;      /* standard corner radius for cards and inputs */
+  --shadow:      none;  /* subtle drop shadow for cards */
+  --font:        Arial, Helvetica, sans-serif;              /* serif font for logo and report headings */
+  --font-sans:   Arial, Helvetica, sans-seriff;  /* system sans-serif for body */
+}
+
+/*  Base body 
+   Light gray page background with dark text. min-height ensures the
+   background fills the whole screen even on short pages.                     */
+body {
+  font-family: var(--font-sans);
+  background: var(--gray-1);
+  color: var(--gray-9);
+  min-height: 100vh;
+  font-size: 14px;
+}
+
+/* Selection page layout 
+   Flexbox centers the card both vertically and horizontally on the screen.
+   Padding ensures the card doesn't touch screen edges on small screens.      */
+.page-center {
+  min-height: 100vh;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 2rem;
+}
+
+/*  Selection card 
+   White rounded card with a max-width so it stays readable on wide screens.
+   The card contains the entire selection form.                               */
+.card {
+  background: var(--white);
+  border: 1px solid var(--gray-2);
+  border-top: 4px solid var(--green);   /* DuckWeb style top accent bar */
+  padding: 1.5rem 2rem;
+  width: 100%;
+  max-width: 520px;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+/*  Logo bar 
+   System name and subtitle stacked vertically, separated from the form
+   by a green underline border.                                               */
+.logo-bar {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 1.2rem;
+  border-bottom: 2px solid var(--green);
+  padding-bottom: 0.8rem;
+}
+
+/* Large serif system name */
+.logo-text {
+  font-family: var(--font);
+  font-size: 1.6rem;
+  font-weight: bold;
+  color: var(--green);
+  letter-spacing: 0;
+}
+
+/* Small uppercase subtitle below the system name */
+.logo-sub {
+  font-size: 0.78rem;
+  color: var(--gray-5);
+  margin-top: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* Card description 
+   Short explainer text above the form telling the student what to do         */
+.card-desc {
+  font-size: 0.88rem;
+  color: var(--gray-5);
+  margin-bottom: 1.4rem;
+  line-height: 1.5;
+}
+
+/* Form layout 
+   Vertical stack of fields with consistent spacing between them              */
+.select-form  { display: flex; flex-direction: column; gap: 1rem; }
+
+/* Each field is a label stacked above an input */
+.field        { display: flex; flex-direction: column; gap: 0.3rem; }
+
+/* Side-by-side row for the two year dropdowns */
+.field-row    { display: flex; gap: 1rem; }
+.field-row .field { flex: 1; }  /* each year dropdown takes equal half the width */
+
+/* Small uppercase label above each input */
+.field label {
+  font-size: 0.82rem;
+  font-weight: bold;
+  color: var(--gray-5);
+}
+
+/* Select dropdowns 
+   Custom styled to remove the native browser arrow and replace it with
+   our own SVG chevron embedded as a data URI in the background property.     */
+select {
+  appearance: none;  /* removes the native browser dropdown arrow */
+  background: var(--white);
+  border: 1px solid var(--gray-2);
+  border-radius: 0;
+  padding: 0.5rem 0.75rem;  
+  font-size: 0.88rem;
+  color: var(--gray-9);
+  cursor: pointer;
+  width: 100%;
+  font-family: var(--font-sans);
+}
+
+/* Green border highlight when the student clicks into a dropdown */
+select:focus { 
+    outline: 2px solid var(--green);
+    outline-offset: 0; 
+}
+
+/* Generate button 
+   Full-width solid green button. Lifts slightly on hover to give feedback.   */
+.btn-generate {
+  background: var(--green);
+  color: var(--yellow);
+  border: 1px solid var(--green-dark);
+  border-radius: 0;
+  padding: 0.6rem 1.2rem;
+  font-size: 0.88rem;
+  font-weight: bold;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  width: fit-content;
+  margin-top: 0.4rem;
+  transition: background 0.1s;
+}
+
+
+.btn-generate:hover  { background: var(--green-dark); transform: translateY(-1px); }
+.btn-generate:active { transform: translateY(0); }  /* press-down effect on click */
+
+/*  Data attribution note 
+   Very small muted text crediting the UO Office of Public Records            */
+.data-note {
+  font-size: 0.72rem;
+  color: var(--gray-3);
+  text-align: left;
+  margin-top: 1.2rem;
+  border-top: 1px solid var(--gray-2);
+  padding-top: 0.6rem;
+}
+
+/* Navbar 
+   Sticky top bar on the report page. Stays visible while the student scrolls
+   so they always know which major and year range they are viewing.
+   z-index: 10 ensures it sits above course cards when scrolling.             */
+.navbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--green);
+  border-bottom: 3px solid var(--yellow);
+  padding: 0.7rem 1.5rem;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+
+/* Clickable logo that takes the student back to the selection screen */
+.nav-logo {
+  font-family: var(--font);
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: var(--yellow);
+  text-decoration: none;
+  letter-spacing: 0;
+}
+
+/* Current selection shown on the right side of the navbar */
+.nav-info { font-size: 0.82rem; color: var(--white); }
+
+/* Report page container 
+   Centers content with a max-width and adds comfortable padding.
+   Bottom padding is large so the back button has breathing room.             */
+.report-page {
+  max-width: 900px;
+  margin: 0 auto;
+  padding:  1.5rem;
+}
+
+/* Report header 
+   Major name, year range, data source note, and grade color legend           */
+.report-header {
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.8rem;
+  border-bottom: 2px solid var(--green);  /* green rule matches the logo bar */
+}
+
+.report-header h1 {
+  font-family: var(--font);
+  font-size: 1.4rem;
+  font-weight: bold;
+  color: var(--green);
+  margin-bottom: 0.2rem;
+}
+
+/* Small gray metadata line below the major name */
+.report-meta { font-size: 0.78rem; color: var(--gray-5); margin-bottom: 0.7rem; }
+
+/* Grade legend 
+   Row of colored chips (A, B, C, DNF) matching the bar chart colors.
+   Sits in the report header so it is visible before the first chart.         */
+.legend-row { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+
+.legend-chip {
+  padding: 0.15rem 0.55rem;
+  border-radius: 0;
+  font-size: 0.75rem;
+  font-weight: bold;
+  color: var(--white);
+  border: 1px solid rgba(0,0,0,0.15);
+}
+
+/* Each chip color exactly matches its bar color in Chart.js */
+.legend-chip.a   { background: var(--green-dark); }
+.legend-chip.b   { background: var(--lime-green); }
+.legend-chip.c   { background: var(--yellow); }
+.legend-chip.dnf { background: var(--red); }
+
+/* Small note explaining what DNF means */
+.legend-note { font-size: 0.75rem; color: var(--gray-5); }
+
+/* Term heading 
+   Section header for each degree-plan term e.g. "Year 1 — Fall".
+   Groups all required courses for that term underneath it.                   */
+.term-heading {
+  font-family: var(--font);
+  font-size: 1rem;
+  font-weight: bold;
+  color: var(--white);
+  background: var(--green);
+  padding: 0.4rem 0.8rem;
+  margin: 1.5rem 0 0.5rem;
+  border-left: 4px solid var(--yellow);
+}
+
+/*  Course block 
+   White card containing everything for one required course:
+   the header strip, best instructor banner, and all charts.
+   overflow:hidden clips child elements to the rounded corners.               */
+.course-block {
+  background: var(--white);
+  border: 1px solid var(--gray-2);
+  border-top: 2px solid var(--green);
+  margin-bottom: 1rem;
+  box-shadow: none;
+  border-radius: 0;
+}
+
+/* Light green strip at the top of each course card showing the course code */
+.course-header {
+  background: var(--green-light);
+  padding: 0.5rem 0.8rem;
+  border-bottom: 1px solid var(--gray-2);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* Bold course code e.g. "CS 210" */
+.course-code {
+  font-size: 0.95rem;
+  font-weight: bold;
+  color: var(--green);
+}
+
+/*  Best instructor banner 
+   Dark green highlighted block shown immediately below the course header.
+   Calls out the top-ranked instructor with their grade stats at a glance.
+   This is the main recommendation the student uses to make their decision.   */
+.best-banner {
+  background: var(--green);
+  color: var(--white);
+  padding: 0.6rem 0.8rem;
+  border-bottom: 2px solid var(--yellow);
+}
+
+/* Small "BEST OPTION" label above the instructor name */
+.best-label {
+  font-size: 0.68rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--yellow);
+  margin-bottom: 0.2rem;
+}
+
+/* Instructor name in large readable text */
+.best-name {
+  font-size: 0.95rem;
+  font-weight: bold;
+  margin-bottom: 0.4rem;
+}
+
+/* Horizontal row of grade stat badges */
+.best-stats { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+
+/* Individual stat badge — semi-transparent pill shape */
+.stat {
+  font-size: 0.78rem;
+  font-weight: bold;
+  background: rgba(255,255,255,0.15);
+  padding: 0.1rem 0.4rem;
+  border: 1px solid rgba(255,255,255,0.2);
+}
+
+/* A grade badge is brighter to draw attention to the key metric */
+.stat.a   { background: rgba(254,225,35,0.2); color: var(--yellow); }
+/* DNF badge has a red tint to signal risk */
+.stat.dnf { background: rgba(139,34,34,0.4); }
+/* Sample size is less prominent — informational not evaluative */
+.stat.total { opacity: 0.7; font-weight: normal; }
+
+/*  Chart groups 
+   Each chart sits in its own padded section inside the course card.
+   A thin border separates each chart from the next.                          */
+.chart-group {
+  padding: 0.7rem 0.8rem 0.5rem;
+  border-bottom: 1px solid var(--gray-2);
+}
+
+/* No border on the last chart so the card doesn't end with a double line */
+.chart-group:last-child { border-bottom: none; }
+
+/* Slightly off-white background for instructor-level charts to visually
+   distinguish them from the all-instructors combined chart above            */
+.instructor-chart { background: #fafafa; }
+
+/* Small uppercase label above each chart e.g. "All instructors combined" */
+.chart-label {
+  font-size: 0.75rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--gray-5);
+  margin-bottom: 0.4rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;  /* space between instructor name and the "recommended" badge */
+}
+
+/* Recommended badge 
+   Small green pill that appears next to the best instructor's chart label    */
+.best-tag {
+  background: var(--yellow);
+  color: var(--green);
+  font-size: 0.65rem;
+  font-weight: bold;
+  padding: 0.1rem 0.4rem;
+  border-radius: 0px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* Constrain chart width so bars don't stretch too wide on large screens */
+.chart-wrap { max-width: 480px; }
+
+/*  No data message 
+   Italic gray text shown inside a course card when data is unavailable       */
+.no-data {
+  padding: 0.7rem 0.8rem;
+  font-size: 0.82rem;
+  color: var(--gray-5);
+  font-style: italic;
+  border-left: 3px solid var(--gray-2);
+  margin: 0.5rem 0.8rem;
+}
+
+/*  Empty state 
+   Shown when the entire report has no data — centered on the page            */
+.empty-state { text-align: center; padding: 3rem 2rem; color: var(--gray-5); }
+.empty-state p { margin-bottom: 1rem; }
+
+/*  Back / new report button 
+   Outlined green button that fills solid on hover — inverted from the
+   generate button so it feels like a secondary action                        */
+.btn-back {
+  display: inline-block;
+  color: var(--white);
+  background: var(--green);
+  text-decoration: none;
+  font-size: 0.82rem;
+  font-weight: bold;
+  border: 1px solid var(--green-dark);
+  border-radius: 0;
+  padding: 0.4rem 0.9rem;
+  transition: background 0.1s;
+}
+
+.btn-back:hover { background: var(--green-dark); color: var(--white); }
+
+/* Centers the back button below the last course block */
+.report-footer { margin-top: 1.5rem; text-align: left; }
+
+/*  Home page — role selection */
+.uo-header {
+  background: var(--green);
+  border-bottom: 3px solid var(--yellow);
+  padding: 0.6rem 1.5rem;
+}
+
+.uo-title {
+  color: var(--yellow);
+  font-size: 0.85rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.home-page {
+  display: flex;
+  justify-content: center;
+  padding: 3rem 1.5rem;
+}
+
+.home-card {
+  background: var(--white);
+  border: 1px solid var(--gray-2);
+  border-top: 4px solid var(--green);
+  padding: 1.8rem 2rem;
+  width: 100%;
+  max-width: 560px;
+}
+
+/*  Role selection buttons */
+.role-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  margin-bottom: 1.2rem;
+}
+
+.role-btn {
+  display: flex;
+  flex-direction: column;
+  padding: 1rem 1.2rem;
+  border: 1px solid var(--gray-2);
+  border-left: 4px solid var(--green);
+  text-decoration: none;
+  color: var(--gray-9);
+  background: var(--white);
+  transition: background 0.1s, border-color 0.1s;
+}
+
+.role-btn:hover {
+  background: var(--green-light);
+  border-left-color: var(--yellow);
+}
+
+.role-btn-title {
+  font-size: 1rem;
+  font-weight: bold;
+  color: var(--green);
+  margin-bottom: 0.3rem;
+}
+
+.role-btn-desc {
+  font-size: 0.8rem;
+  color: var(--gray-5);
+  line-height: 1.4;
+}
+
+/*  Admin page sections */
+.admin-section {
+  border: 1px solid var(--gray-2);
+  border-top: 2px solid var(--green);
+  margin-bottom: 1.2rem;
+}
+
+.admin-section-header {
+  background: var(--green-light);
+  padding: 0.5rem 0.8rem;
+  font-weight: bold;
+  font-size: 0.88rem;
+  color: var(--green);
+  border-bottom: 1px solid var(--gray-2);
+}
+
+.admin-section-body {
+  padding: 1rem 0.8rem;
+}
+
+.admin-desc {
+  font-size: 0.82rem;
+  color: var(--gray-5);
+  margin-bottom: 0.9rem;
+  line-height: 1.5;
+}
+
+/*  Admin form fields */
+.admin-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-bottom: 0.8rem;
+}
+
+.admin-field label {
+  font-size: 0.82rem;
+  font-weight: bold;
+  color: var(--gray-9);
+}
+
+.admin-field input[type="file"] {
+  font-size: 0.82rem;
+  color: var(--gray-9);
+  border: 1px solid var(--gray-2);
+  padding: 0.4rem;
+  background: var(--white);
+  width: 100%;
+}
+
+/*  Admin button */
+.btn-admin {
+  background: var(--green);
+  color: var(--yellow);
+  border: 1px solid var(--green-dark);
+  border-radius: 0;
+  padding: 0.5rem 1rem;
+  font-size: 0.82rem;
+  font-weight: bold;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  transition: background 0.1s;
+}
+
+.btn-admin:hover { background: var(--green-dark); }
+
+/*  Cancel button */
+.btn-cancel {
+  display: inline-block;
+  background: var(--white);
+  color: var(--gray-9);
+  border: 1px solid var(--gray-2);
+  padding: 0.5rem 1rem;
+  font-size: 0.82rem;
+  font-weight: bold;
+  text-decoration: none;
+  transition: background 0.1s;
+}
+
+.btn-cancel:hover { background: var(--gray-1); }
+
+/*  Data preview box  */
+.preview-box {
+  margin-top: 1rem;
+  border: 1px solid var(--gray-2);
+  border-left: 3px solid var(--yellow);
+  padding: 0.8rem;
+  background: #fffef5;
+}
+
+.preview-label {
+  font-size: 0.78rem;
+  font-weight: bold;
+  color: var(--gray-5);
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+}
+
+.preview-row {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.8rem;
+  padding: 0.2rem 0;
+  border-bottom: 1px solid var(--gray-2);
+}
+
+.preview-row:last-of-type { border-bottom: none; }
+
+.preview-key {
+  font-weight: bold;
+  color: var(--green);
+  min-width: 140px;
+}
+
+.preview-val { color: var(--gray-9); }
+
+.preview-buttons {
+  display: flex;
+  gap: 0.8rem;
+  margin-top: 0.8rem;
+}
+
+/*  Admin message (success/error) */
+.admin-message {
+  padding: 0.6rem 0.8rem;
+  font-size: 0.85rem;
+  font-weight: bold;
+  margin-bottom: 1rem;
+  border-left: 4px solid;
+}
+
+.admin-message.success {
+  background: #e8f5ee;
+  color: var(--green);
+  border-color: var(--green);
+}
+
+.admin-message.error {
+  background: #fde8e8;
+  color: #8b2222;
+  border-color: #8b2222;
+}
