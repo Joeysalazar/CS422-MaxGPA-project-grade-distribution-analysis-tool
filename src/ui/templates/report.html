@@ -22,6 +22,8 @@
 
     <!-- Report header: major name, year range, data source, and grade legend -->
     <div class="report-header">
+      <a href="/" class="btn-back top-report-btn">← New report</a>
+
       <h1>{{ major }}</h1>
       <p class="report-meta">
         Degree plan · Academic years {{ year_start }}–{{ year_end }} ·
@@ -39,7 +41,7 @@
       </div>
     </div>
 
-    <!-- Empty state — shown if build_report() returned no groups at all -->
+    <!-- Empty state — shown if report returned no groups at all -->
     {% if not groups %}
       <div class="empty-state">
         <p>No data found for the selected major and year range.</p>
@@ -51,12 +53,14 @@
       <!-- Loop through each term group returned by app.py
            Each group has a heading like "Year 1 — Fall" and a list of courses -->
       {% for group in groups %}
+        {% set group_index = loop.index0 %}
 
         <!-- Term heading e.g. "Year 1 — Fall", "Year 1 — Winter", "Year 2 — Fall" -->
         <h2 class="term-heading">{{ group.heading }}</h2>
 
         <!-- Loop through each required course in this term -->
         {% for course in group.courses %}
+        {% set course_index = loop.index0 %}
         <div class="course-block">
 
           <!-- Course code in a green header strip at the top of each card -->
@@ -85,7 +89,7 @@
 
             <!-- Best instructor banner — dark green highlighted block
                  showing the top-ranked instructor with their grade stats
-                 Ranked byx rank_instructors(): highest %A first  -->
+                 Ranked by highest %A first  -->
             {% if course.best_instructor %}
             <div class="best-banner">
               <div class="best-label">Best option</div>
@@ -109,9 +113,8 @@
             <div class="chart-group">
               <p class="chart-label">All instructors combined</p>
               <div class="chart-wrap">
-                <!-- Canvas ID uses loop indices to stay unique across all courses.
-                     Chart.js needs a unique ID for every canvas it renders into. -->
-                <canvas id="chart_all_{{ loop.index }}_{{ loop.index0 }}" height="90"></canvas>
+                <!-- Canvas ID uses group and course indices so each chart is unique. -->
+                <canvas id="chart_all_{{ group_index }}_{{ course_index }}" height="90"></canvas>
               </div>
             </div>
 
@@ -125,7 +128,7 @@
                 <span class="best-tag">recommended</span>
               </p>
               <div class="chart-wrap">
-                <canvas id="chart_best_{{ loop.index }}_{{ loop.index0 }}" height="90"></canvas>
+                <canvas id="chart_best_{{ group_index }}_{{ course_index }}" height="90"></canvas>
               </div>
             </div>
             {% endif %}
@@ -136,9 +139,8 @@
             <div class="chart-group instructor-chart">
               <p class="chart-label">{{ inst.name }}</p>
               <div class="chart-wrap">
-                <!-- Three indices needed to keep this ID unique:
-                     outer loop (course), inner loop (instructor)           -->
-                <canvas id="chart_inst_{{ loop.index }}_{{ loop.index0 }}_{{ loop.index }}" height="90"></canvas>
+                <!-- Canvas ID uses group, course, and instructor indices so each chart is unique. -->
+                <canvas id="chart_inst_{{ group_index }}_{{ course_index }}_{{ loop.index0 }}" height="90"></canvas>
               </div>
             </div>
             {% endfor %}
@@ -164,7 +166,7 @@
   </div>
 
   <script>
-    // Chart colors — one color per grade bucket 
+    // Chart colors — one color per grade bucket
     // These match the legend chips in the report header
     const COLORS = {
       A:   '#1e6b40',  // green  — matches --green CSS variable
@@ -176,8 +178,8 @@
     // Grade labels — always displayed in this order on every chart
     const LABELS = ['A', 'B', 'C', 'DNF'];
 
-    // makeChart() 
-    // Creates and renders a single horizontal bar chart into a canvas element.
+    // makeChart()
+    // Creates and renders a single bar chart into a canvas element.
     //
     // canvasId — the HTML id attribute of the <canvas> to render into
     // data     — object with keys A, B, C, DNF, all percentages (0–100)
@@ -211,7 +213,6 @@
             tooltip: {
               callbacks: {
                 // Add a % sign to the tooltip value when hovering over a bar
-                // Must use backticks (template literal) — single quotes won't work
                 label: ctx => `${ctx.parsed.y}%`
               }
             }
@@ -235,15 +236,19 @@
       });
     }
 
-    // Render all charts 
+    // Render all charts
     // groups is the full nested data structure passed from Flask.
     // | tojson converts the Python list to a JSON string.
     // | safe tells Flask not to escape the quotes inside the JSON —
-    //  without | safe the browser would see &quot; instead of " and crash.
-    // @ts-nocheck 
+    // without | safe the browser would see &quot; instead of " and crash.
+    // @ts-nocheck
     const groups = {{ groups | tojson | safe }};
 
-    // Loop through every group (term) and every course inside it
+    // Loop through every group (term) and every course inside it.
+    // IDs must match the Jinja canvas IDs above:
+    // chart_all_<groupIndex>_<courseIndex>
+    // chart_best_<groupIndex>_<courseIndex>
+    // chart_inst_<groupIndex>_<courseIndex>_<instructorIndex>
     groups.forEach((group, gi) => {
       group.courses.forEach((course, ci) => {
 
@@ -252,13 +257,11 @@
         if (course.no_data) return;
 
         // Render the all-instructors combined chart for this course
-        // Canvas ID must match exactly what Jinja2 rendered in the HTML
-        // Backticks are required — single quotes do not interpolate variables
-        makeChart(`chart_all_${ci + 1}_${ci}`, course.all_grades);
+        makeChart(`chart_all_${gi}_${ci}`, course.all_grades);
 
         // Render the best instructor chart if one exists
         if (course.best_instructor) {
-          makeChart(`chart_best_${ci + 1}_${ci}`, {
+          makeChart(`chart_best_${gi}_${ci}`, {
             A:   course.best_instructor.A,
             B:   course.best_instructor.B,
             C:   course.best_instructor.C,
@@ -268,7 +271,7 @@
 
         // Render one chart per remaining instructor below the best
         course.other_instructors.forEach((inst, ii) => {
-          makeChart(`chart_inst_${ci + 1}_${ci}_${ci + 1}`, {
+          makeChart(`chart_inst_${gi}_${ci}_${ii}`, {
             A:   inst.A,
             B:   inst.B,
             C:   inst.C,

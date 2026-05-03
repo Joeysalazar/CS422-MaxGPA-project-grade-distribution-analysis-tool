@@ -1,5 +1,8 @@
+import webbrowser
+from threading import Timer
 from flask import Flask, render_template, request, redirect, url_for, session
 from pathlib import Path
+import sys
 
 app = Flask(__name__)
 
@@ -16,6 +19,12 @@ app.secret_key = "maxgpa-secret-key"
 # .parents[2] = repo root
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
+# ── Connect Flask UI to gradeAnalysis backend
+# Allows app.py to import gradeAnalysis/student.py without moving team files.
+sys.path.append(str(REPO_ROOT / "gradeAnalysis"))
+
+from student import run_analysis, load_reconciliation
+
 # ── Supported majors 
 # Keys match the dropdown option values in select.html and admin.html
 # Values are the display labels shown in the report header and messages
@@ -28,6 +37,104 @@ MAJORS = {
 # ── Available years in the grade data ────────────────────────────────────────
 # Used to populate the year range dropdowns on the selection screen
 YEARS = list(range(2015, 2026))
+
+
+def format_course_code(course_id):
+    """
+    Converts analysis course IDs like CS210 or PSY201Z into UI labels like CS 210 or PSY 201Z.
+    """
+    letters = ""
+    numbers = ""
+
+    for char in course_id:
+        if char.isalpha() and not numbers:
+            letters += char
+        else:
+            numbers += char
+
+    return f"{letters} {numbers}".strip()
+
+
+def convert_analysis_to_ui_groups(analysis_report):
+    """
+    Converts gradeAnalysis.student.run_analysis() output into the grouped structure
+    report.html already expects.
+    """
+    term_map = {
+        1: "Fall",
+        2: "Winter",
+        3: "Spring",
+    }
+
+    grouped = {}
+
+    for item in analysis_report:
+        year = item.get("year")
+        term = item.get("term")
+        course_id = item.get("course", "")
+        heading = f"Year {year} — {term_map.get(term, 'Unknown')}"
+
+        if heading not in grouped:
+            grouped[heading] = []
+
+        code = format_course_code(course_id)
+
+        if item.get("missing") or item.get("no_data"):
+            grouped[heading].append({
+                "code": code,
+                "all_grades": {"A": 0, "B": 0, "C": 0, "DNF": 0},
+                "best_instructor": None,
+                "other_instructors": [],
+                "no_data": True,
+                "asterisk_only": item.get("asterisk_only", False),
+            })
+            continue
+
+        distribution = item.get("distribution", {})
+        instructors = item.get("instructors", {})
+
+        ranked_instructors = sorted(
+            instructors.items(),
+            key=lambda pair: pair[1].get("A", 0),
+            reverse=True,
+        )
+
+        best_instructor = None
+        other_instructors = []
+
+        for index, (name, data) in enumerate(ranked_instructors):
+            instructor_data = {
+                "name": name.title(),
+                "A": data.get("A", 0),
+                "B": data.get("B", 0),
+                "C": data.get("C", 0),
+                "DNF": data.get("DNF", 0),
+                "total": data.get("total_students", 0),
+            }
+
+            if index == 0:
+                best_instructor = instructor_data
+            else:
+                other_instructors.append(instructor_data)
+
+        grouped[heading].append({
+            "code": code,
+            "all_grades": {
+                "A": distribution.get("A", 0),
+                "B": distribution.get("B", 0),
+                "C": distribution.get("C", 0),
+                "DNF": distribution.get("DNF", 0),
+            },
+            "best_instructor": best_instructor,
+            "other_instructors": other_instructors,
+            "no_data": False,
+            "asterisk_only": False,
+        })
+
+    return [
+        {"heading": heading, "courses": courses}
+        for heading, courses in grouped.items()
+    ]
 
 
 def build_report(major_key, year_start, year_end):
@@ -251,7 +358,27 @@ def report():
     if year_start > year_end:
         year_start, year_end = year_end, year_start
 
-    groups      = build_report(major_key, year_start, year_end)
+    degree_files = {
+        "cs": "computer_science_bs.csv",
+        "psychology": "psychology_ba.csv",
+        "architecture": "architecture_barch.csv",
+    }
+
+    grade_file = REPO_ROOT / "data" / "grades" / "cleaned_pub_rec_master.csv"
+    degree_file = REPO_ROOT / "data" / "degree_plans" / "matched" / degree_files[major_key]
+    recon_file = REPO_ROOT / "data" / "reconciliation.csv"
+
+    recon_map = load_reconciliation(str(recon_file)) if recon_file.exists() else {}
+
+    analysis_report = run_analysis(
+        str(grade_file),
+        str(degree_file),
+        year_start,
+        year_end,
+        recon_map,
+    )
+
+    groups = convert_analysis_to_ui_groups(analysis_report)
     major_label = MAJORS[major_key]
 
     return render_template(
@@ -458,6 +585,10 @@ def load_recon():
     return redirect(url_for("admin"))
 
 
+def open_browser():
+    webbrowser.open_new("http://127.0.0.1:5000")
+
+
 if __name__ == "__main__":
-    # debug=True enables auto-reload on file save during development
-    app.run(debug=True)
+    Timer(1, open_browser).start()
+    app.run(debug=True, use_reloader=False)
