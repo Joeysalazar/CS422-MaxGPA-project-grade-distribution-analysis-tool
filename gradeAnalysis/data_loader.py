@@ -2,6 +2,7 @@ import csv
 
 REQ_GRADE_FIELDS = ["TERM", "SUBJ"]
 
+#get exact course num from row with flexible col naming
 def get_course_number(row):
     return (
         row.get("NUM") or
@@ -10,8 +11,9 @@ def get_course_number(row):
         ""
     ).strip()
 
+#validate CSV headers 
 def validate_headers(fieldnames):
-    
+    #checks headers and required fields
     if not fieldnames:
         return False, "No headers found."
 
@@ -24,6 +26,7 @@ def validate_headers(fieldnames):
 
     return True, "Headers look valid."
 
+#preview CSV file
 def preview_csv(filepath):
     with open(filepath, newline='') as f:
         reader = csv.DictReader(f)
@@ -44,6 +47,7 @@ def preview_csv(filepath):
     print("No valid data rows found.")
     return False
 
+#prompt user for confirmation before commiting changes
 def confirm_load():
     while True:
         choice = input("\nProceed with loading this data? (y/n): ").strip().lower()
@@ -53,6 +57,7 @@ def confirm_load():
 
         print("Please enter 'y' or 'n'.")
 
+#load CSV into memory after validation
 def load_csv(filepath):
     with open(filepath, newline='') as f:
         reader = csv.DictReader(f)

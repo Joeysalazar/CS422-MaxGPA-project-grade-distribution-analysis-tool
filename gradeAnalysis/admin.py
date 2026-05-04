@@ -9,6 +9,7 @@ RECON_FILE = "data/reconciliation.csv"
 import os
 from data_loader import preview_csv, confirm_load, load_csv
 
+#update the system's active grade dataset
 def update_grade_data():
     DEFAULT_PATH = "data/grades/cleaned_pub_rec_master.csv"
 
@@ -58,6 +59,7 @@ def update_grade_data():
     except Exception as e:
         print(f"Failed to load data: {e}")
 
+#update stored degree plan files
 def update_degree_plan():
     filepath = input("Enter path to degree CSV: ").strip()
     if not os.path.exists(filepath):
@@ -78,6 +80,7 @@ def update_degree_plan():
     else:
         print("Update canceled.")
 
+#load and verify recon mappings
 def load_reconciliation_file():
     recon = load_reconciliation(RECON_FILE)
 
@@ -98,7 +101,7 @@ def load_reconciliation_file():
     print("\nReconciliation file loaded successfully.")
     return recon
 
-
+#command line interfaces
 def admin_menu():
     while True:
         print("\n--- ADMIN MENU ---")
