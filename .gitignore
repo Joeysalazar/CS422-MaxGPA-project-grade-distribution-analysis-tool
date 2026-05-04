@@ -4,3 +4,13 @@ __pycache__/
 venv/
 .env
 .vscode/
+
+# Do not submit University grade-history data
+data/grades/*.csv
+data/raw/*.csv
+
+# Keep placeholder documentation files
+!data/grades/README.md
+!data/grades/.gitkeep
+!data/raw/README.md
+!data/raw/.gitkeep
