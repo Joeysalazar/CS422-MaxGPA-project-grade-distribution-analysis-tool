@@ -5,7 +5,7 @@ import os
 #global
 recon_map = {}
 
-#load data section
+#load CSV datasets
 #========================================
 
 #Load raw CSV data using DictReader
@@ -26,6 +26,9 @@ def load_csv_data(filename):
 
 #load degree plan from CSV
 def load_degree_plan(filepath, recon_map):
+    #handles inconsistant column naming
+    #filters non-required courses
+    #applies recon mapping
     plan = []
 
     with open(filepath, newline='') as f:
@@ -94,6 +97,7 @@ def load_reconciliation(filepath):
 
 #filter for electives
 def is_required(subj, num, title):
+    #determines if course is required
     if num.startswith("199"):
         return False
     
@@ -104,6 +108,7 @@ def is_required(subj, num, title):
 
 #check for asterisks only
 def is_asterisk(rows):
+    #identifies courses with no usable grade data
     grade_keys = ["ap", "a", "am", "bp", "b", "bm", "cp", "c", "cm", "dp", "d", "dm", "f", "p", "n"]
 
     for row in rows:
@@ -133,13 +138,15 @@ def filter_year(rows, start_year, end_year):
     
     return filtered
 
+#construct normalized course ID
 def make_course_id(subj, num):
+    #removes whitespace and extracts numeric portion only
     subj = subj.strip().upper().replace(" ", "")
     num = ''.join(filter(str.isdigit, num))
     return f"{subj}{num}"
 
 #normalize str using recon mapping
-#case insensitive
+#Used for course titles and ensure consistency across mismatched datasets
 def reconcile(value, recon_map):
     if not value:
         return value
@@ -147,7 +154,9 @@ def reconcile(value, recon_map):
     v = value.strip().lower()
     return recon_map.get(v, value.strip())
 
+#normalize a raw grade row
 def normalize_grade_row(row, recon_map):
+    #return course id and title
     subj = (row.get('subj') or row.get('SUBJ') or '').strip()
     num = (row.get('NUM') or row.get('NUMB') or row.get('num') or '').strip()
     title = (row.get('title') or row.get('TITLE') or '').strip()
@@ -160,6 +169,7 @@ def normalize_grade_row(row, recon_map):
 
     return course_id, title
 
+#normalize subj and num into canonical course ID
 def normalize_id(subj, num):
     subj = subj.upper().strip()
     num = ''.join(filter(str.isdigit, str(num)))
@@ -169,8 +179,9 @@ def normalize_id(subj, num):
 #Analytics Layer
 #===================================================
 
-#helper
+#helper to convert values to int
 def safe_int(x):
+    #handles: None, empty str, and "*"
     try:
         if x is None:
             return 0
@@ -272,23 +283,6 @@ def group_by_course(rows, recon_map):
 
     return courses
 
-#compute grade distribution per instructor
-def instructor_distribution(rows):
-    #enables instructor comparison feature
-    #supports "find best instructor" requirement
-
-    #get instructor data
-    instructors = defaultdict(list)
-    for row in rows:
-        instructor = row.get('instructor', 'UNKNOWN')
-        instructors[instructor].append(row)
-
-    results = {}
-    for inst, inst_rows in instructors.items():
-        results[inst] = compute_grade_distribution(inst_rows)
-
-    return results
-
 #rank instructors by highest percentage of A grades
 def rank_instructors(distributions):
     #directly supports decision-making for students
@@ -337,16 +331,9 @@ def rank_instructors(distributions):
 #Integration Layer
 #===================================================
 
-#compute distributions to instructor
-def instructor_distributions(instructor_index):
-    results = {}
-
-    for inst, rows in instructor_index.items():
-        results[inst] = compute_grade_distribution(rows)
-
-    return results
-
+#match course ID to dataset
 def find_course_match(cid, course_data):
+    #strategy: exact match and subj+num fallback
     # exact match first (fast)
     if cid in course_data:
         return cid
