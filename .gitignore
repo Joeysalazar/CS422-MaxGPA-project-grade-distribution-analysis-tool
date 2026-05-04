@@ -8,9 +8,15 @@ venv/
 # Do not submit University grade-history data
 data/grades/*.csv
 data/raw/*.csv
+data/processed/*.csv
 
-# Keep placeholder documentation files
+# Keep placeholder files for folders we still need
 !data/grades/README.md
 !data/grades/.gitkeep
 !data/raw/README.md
 !data/raw/.gitkeep
+
+# Python virtual environment and cache
+.venv/
+__pycache__/
+*.pyc
