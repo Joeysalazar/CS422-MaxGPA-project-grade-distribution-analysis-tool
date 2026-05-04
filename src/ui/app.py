@@ -368,6 +368,17 @@ def report():
     degree_file = REPO_ROOT / "data" / "degree_plans" / "matched" / degree_files[major_key]
     recon_file = REPO_ROOT / "data" / "reconciliation.csv"
 
+    # Failsafe for submitted projects: grade data is intentionally not included.
+    # If the CSV is missing, send the administrator to the upload page instead
+    # of letting run_analysis() crash with FileNotFoundError.
+    if not grade_file.exists():
+        session["message"] = (
+            "Grade data has not been loaded yet. Please use the Admin page to "
+            "upload the provided grade CSV before generating a report."
+        )
+        session["message_type"] = "error"
+        return redirect(url_for("admin"))
+
     recon_map = load_reconciliation(str(recon_file)) if recon_file.exists() else {}
 
     analysis_report = run_analysis(
@@ -412,11 +423,11 @@ def admin():
 def load_grades():
     """
     Receives the uploaded grade history CSV file.
-    Reads the first non-asterisk row and stores it as a preview
-    in the session. The file content is also stored in the session
-    so it can be saved after the admin confirms.
+    Reads the first non-asterisk row and stores only that small preview
+    in the session. The full uploaded CSV is saved temporarily on disk
+    so large grade files do not overflow Flask's cookie-based session.
 
-    Does NOT save anything to disk yet — that happens in confirm_grades().
+    The final save still happens in confirm_grades().
     """
     file = request.files.get("grade_file")
 
@@ -436,7 +447,7 @@ def load_grades():
     # This skips UO's privacy-redacted rows and shows real data in the preview
     preview = None
     for row in reader:
-        if any(v.strip() not in ("*", "") for v in row.values()):
+        if any(v and v.strip() not in ("*", "") for v in row.values()):
             preview = dict(row)
             break
 
@@ -446,9 +457,18 @@ def load_grades():
         session["message_type"] = "error"
         return redirect(url_for("admin"))
 
-    # Store preview dict and full file content in session for the confirm step
+    # Save the full uploaded CSV temporarily on disk instead of in session.
+    # Flask sessions are browser cookies, so storing the whole grade CSV there
+    # causes ERR_RESPONSE_HEADERS_TOO_BIG for large files.
+    pending_path = REPO_ROOT / "data" / "grades" / "_pending_grade_upload.csv"
+    pending_path.parent.mkdir(parents=True, exist_ok=True)
+
+    with open(pending_path, "w", encoding="utf-8") as f:
+        f.write(content)
+
+    # Store only small values in the session for the preview/confirm step
     session["grade_preview"]      = preview
-    session["pending_grade_data"] = content
+    session["pending_grade_path"] = str(pending_path)
     return redirect(url_for("admin"))
 
 
@@ -456,25 +476,38 @@ def load_grades():
 def confirm_grades():
     """
     Admin has confirmed the grade data preview looks correct.
-    Retrieves the pending file content from the session and
+    Retrieves the temporary upload path from the session and
     saves it to data/grades/cleaned_pub_rec_master.csv,
     replacing the existing grade data.
     """
-    content = session.pop("pending_grade_data", None)
+    pending_path = session.pop("pending_grade_path", None)
 
     # Safety check — if session expired or no pending data, bail out
-    if not content:
+    if not pending_path:
         session["message"]      = "No pending data to save."
         session["message_type"] = "error"
         return redirect(url_for("admin"))
 
-    # Build the save path and create parent folders if they don't exist
+    pending_path = Path(pending_path)
+
+    if not pending_path.exists():
+        session["message"]      = "Pending grade data file was not found. Please upload it again."
+        session["message_type"] = "error"
+        return redirect(url_for("admin"))
+
+    # Build the final save path and create parent folders if they don't exist
     save_path = REPO_ROOT / "data" / "grades" / "cleaned_pub_rec_master.csv"
     save_path.parent.mkdir(parents=True, exist_ok=True)
 
-    # Write the file — this overwrites the existing grade data
-    with open(save_path, "w", encoding="utf-8") as f:
-        f.write(content)
+    # Copy the pending upload into the final grade data file
+    with open(pending_path, "r", encoding="utf-8") as src:
+        content = src.read()
+
+    with open(save_path, "w", encoding="utf-8") as dst:
+        dst.write(content)
+
+    # Remove temporary pending file after successful save
+    pending_path.unlink(missing_ok=True)
 
     session["message"]      = "Grade data loaded and saved successfully."
     session["message_type"] = "success"
