@@ -283,6 +283,23 @@ def group_by_course(rows, recon_map):
 
     return courses
 
+#compute grade distribution per instructor
+def instructor_distribution(rows):
+    #enables instructor comparison feature
+    #supports "find best instructor" requirement
+
+    #get instructor data
+    instructors = defaultdict(list)
+    for row in rows:
+        instructor = row.get('instructor', 'UNKNOWN')
+        instructors[instructor].append(row)
+
+    results = {}
+    for inst, inst_rows in instructors.items():
+        results[inst] = compute_grade_distribution(inst_rows)
+
+    return results
+
 #rank instructors by highest percentage of A grades
 def rank_instructors(distributions):
     #directly supports decision-making for students
@@ -331,9 +348,8 @@ def rank_instructors(distributions):
 #Integration Layer
 #===================================================
 
-#match course ID to dataset
+
 def find_course_match(cid, course_data):
-    #strategy: exact match and subj+num fallback
     # exact match first (fast)
     if cid in course_data:
         return cid
